@@ -1,0 +1,7 @@
+Number of all interactions ,5
+number of all promoters ,3
+Number of all GSMs ,5
+Number of overlaped interaction (just contain promoter) ,2
+Number of GSMs that had overlap with interactions (contain promoter and GSM) ,2
+Number of nonOverlap interactions ,3
+Number of Non-overlapped interaction that some GSMs are in their bin ,3

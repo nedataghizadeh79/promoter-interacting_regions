@@ -1,0 +1,4 @@
+promoter_id,start,end,gene_name,gene_id,chr
+promoter_0,5500,7500,DDX11L1,ENSG00000223972,1
+promoter_1,15500,17500,DDX11L1,ENSG00000223972,1
+promoter_2,80000,85000,DDX11L1,ENSG00000223972,1

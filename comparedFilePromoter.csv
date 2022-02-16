@@ -1,0 +1,3 @@
+start of HIC,"[ end of HIC , chr_hmec , ( start of interactions , end of interactions )  , overlap with = [promoterID , start of promoter , end of promoter] "
+5000,"[10000, 1, (5000, 10000), (5000, 10000), '-', ['promoter_0', '5500', '7500']]"
+15000,"[20000, 1, (15000, 20000), '-', ['promoter_1', '15500', '17500']]"
