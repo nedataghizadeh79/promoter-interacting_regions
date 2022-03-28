@@ -1,0 +1,207 @@
+#
+import csv
+import pandas as pd
+
+HMEC_dict = {1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: [], 10: [], 11: [], 12: [], 13: [],
+             14: [], 15: [], 16: [], 17: [], 18: [], 19: [], 20: [], 21: [], 22: [], 23: [], 24: [], 25: []}
+
+all_chars = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+
+interactions_forGSM = {}
+Non_overlaped_interactions = {}
+# overlappedPromoter = {}
+overlappedGSM_with_promoterInteraction = {}
+overlappedGSM_with_NonOverlapedInteraction = []
+dataframe_GSM = pd.DataFrame()
+dataframe_hmec =pd.DataFrame()
+
+firstBin_have_promoter = False
+secondBin_have_promoter = False
+
+
+# def hash_start_end(num):
+#     return int(int(num) // 5000) * 5000
+
+
+try:
+    # در این دیکشنری کلید را  چر , و ولیو را شروع  اچمک و شروع  اینترکشن قرار میدهیم که بعدا آنها را اسپلیت کنیم
+    with open('HMEC_SRR1658680.csv', 'r') as hmecfile:
+        csv_reader_hmec = csv.reader(hmecfile)
+        dataframe_hmec = pd.DataFrame(csv_reader_hmec)
+
+        for i in range(1, len(dataframe_hmec.index)):
+
+            chr_of_hmec = int(dataframe_hmec.iloc[[i]][2].to_string(index=False))
+            start_of_hmec = int(dataframe_hmec.iloc[[i]][3].to_string(index=False))
+            end_of_hmec = int(dataframe_hmec.iloc[[i]][4].to_string(index=False))
+            start_of_interaction_hmec = int(dataframe_hmec.iloc[[i]][7].to_string(index=False))
+            end_of_interaction_hmec = int(dataframe_hmec.iloc[[i]][8].to_string(index=False))
+
+
+            info_list = []
+
+            for i in all_chars:
+                if chr_of_hmec == i:
+                    info_list.append(start_of_hmec)
+                    info_list.append(end_of_hmec)
+                    info_list.append(start_of_interaction_hmec)
+                    info_list.append(end_of_interaction_hmec)
+                    HMEC_dict[i].append(info_list)
+
+                info_list = []
+
+except IOError as e:
+    print('Operation failed: %s' % e.strerror)
+
+
+
+with open('promoters_with_chr.csv', 'r') as Promfile:
+
+    csv_reader = csv.reader(Promfile)
+    dataframe_promoter = pd.DataFrame(csv_reader)
+    numberOf_allPromoters = (len(dataframe_promoter.index)) - 1
+
+    for i in range(1, len(dataframe_promoter.index) ):
+        begin_overflow = int(dataframe_promoter.iloc[[i]][1].to_string(index=False))
+        end_overflow = int(dataframe_promoter.iloc[[i]][2].to_string(index=False))
+        char_promoter = int(dataframe_promoter.iloc[[i]][5].to_string(index=False))
+
+        if char_promoter in HMEC_dict.keys():  # char haye yeksan
+            for i in range(len(HMEC_dict[char_promoter])):  # be tedad value haye key
+                beggin_hmec = HMEC_dict[char_promoter][i][0]  # adad sotonaye start hmec
+                end_hmec = HMEC_dict[char_promoter][i][1]
+                beggin_interaction = HMEC_dict[char_promoter][i][2]
+                end_interaction = HMEC_dict[char_promoter][i][3]
+
+                if ( beggin_hmec <= begin_overflow ) and ( end_overflow <= end_hmec ) :
+                    dataframe_hmec.loc[dataframe_hmec[3].eq(str(beggin_hmec)) & dataframe_hmec[7].eq(str(beggin_interaction)), 12] = True
+                if ( beggin_interaction <= begin_overflow ) and ( end_overflow <= end_interaction ) :
+                    dataframe_hmec.loc[dataframe_hmec[3].eq(str(beggin_hmec)) & dataframe_hmec[7].eq(str(beggin_interaction)), 13] = True
+
+
+                if 10 <= abs( beggin_hmec - end_overflow ) and  abs( beggin_hmec - end_overflow ) <=2010 :
+                    dataframe_hmec.loc[dataframe_hmec[3].eq(str(beggin_hmec)) & dataframe_hmec[7].eq(str(beggin_interaction)), 12] = True
+                if 10 <= ( beggin_interaction - end_overflow ) and  ( beggin_interaction - end_overflow )<=2010 :
+                    dataframe_hmec.loc[dataframe_hmec[3].eq(str(beggin_hmec)) & dataframe_hmec[7].eq(str(beggin_interaction)), 13] = True
+
+
+                if 10 <= abs(end_hmec - begin_overflow ) and abs(end_hmec - begin_overflow )<=2010 :
+                    dataframe_hmec.loc[dataframe_hmec[3].eq(str(beggin_hmec)) & dataframe_hmec[7].eq(str(beggin_interaction)), 12] = True
+                if 10 <= ( end_interaction - begin_overflow ) and ( end_interaction - begin_overflow )<=2010 :
+                    dataframe_hmec.loc[dataframe_hmec[3].eq(str(beggin_hmec)) & dataframe_hmec[7].eq(str(beggin_interaction)), 13] = True
+
+yesSar_promoter=0
+hichSar_promoter=0
+
+
+for i in range(1, len(dataframe_hmec.index)):
+    t1 = (dataframe_hmec.iloc[[i]][12].to_string(index=False))
+    t2 = (dataframe_hmec.iloc[[i]][13].to_string(index=False))
+
+    if t1 != t2  : # faghat yekishon bayad true bashe ke yeksar shamele promoter bashe
+        yesSar_promoter+=1
+
+    if t1=="False" and t2=="False":
+        hichSar_promoter+=1
+
+
+# /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+promoter_and_GSM=0
+yekSar_GSM=0
+
+
+with open('H2AZ (07-594).csv', 'r') as GSMfile:
+
+    csv_reader = csv.reader(GSMfile)
+    dataframe_GSM = pd.DataFrame(csv_reader)
+    numberOf_allGSMs = (len(dataframe_GSM.index)) - 1
+
+    for i in range(1, len(dataframe_GSM.index) ):
+        begin_overflowGSM = int(dataframe_GSM.iloc[[i]][1].to_string(index=False))
+        end_overflowGSM = int(dataframe_GSM.iloc[[i]][2].to_string(index=False))
+        number=(dataframe_GSM.iloc[[i]][0].to_string(index=False))[3:]
+        char_GSM = int(number)
+
+        ekhtelaf = end_overflowGSM - begin_overflowGSM + 10
+
+        for j in range(1, len(dataframe_hmec.index) ):
+            beggin_hmec = int(dataframe_hmec.iloc[[j]][3].to_string(index=False))
+            end_hmec = int(dataframe_hmec.iloc[[j]][4].to_string(index=False))
+            beggin_interaction = int(dataframe_hmec.iloc[[j]][7].to_string(index=False))
+            end_interaction = int(dataframe_hmec.iloc[[j]][8].to_string(index=False))
+            char_hmec =int(dataframe_hmec.iloc[[j]][2].to_string(index=False))
+            t1 = (dataframe_hmec.iloc[[j]][12].to_string(index=False))
+            t2 = (dataframe_hmec.iloc[[j]][13].to_string(index=False))
+
+            if char_hmec == char_GSM:  # barabary chr
+                if t1 != t2:  # فقط یک سر پروموتر داره
+                    if (beggin_hmec <= begin_overflowGSM) and (end_overflowGSM <= end_hmec) and t1=="False":
+                        promoter_and_GSM += 1
+                    if (beggin_interaction <= begin_overflowGSM) and (end_overflowGSM <= end_interaction) and t2=="False":
+                        promoter_and_GSM += 1
+
+                    if 10 <= abs(beggin_hmec - end_overflowGSM) and abs(beggin_hmec - end_overflowGSM) <= ekhtelaf and t1=="False":
+                        promoter_and_GSM += 1
+                    if 10 <= abs(beggin_interaction - end_overflowGSM) and abs(beggin_interaction - end_overflowGSM) <= ekhtelaf and t2=="False":
+                        promoter_and_GSM += 1
+
+                    if 10 <= abs(end_hmec - begin_overflowGSM) and abs(end_hmec - begin_overflowGSM) <= ekhtelaf and t1=="False":
+                        promoter_and_GSM += 1
+                    if 10 <= abs(end_interaction - begin_overflowGSM) and abs(end_interaction - begin_overflowGSM) <= ekhtelaf and t2=="False":
+                        promoter_and_GSM += 1
+
+                if t1 == "False" and t2 == "False" :  # هیچ سر پروموتر ندارند
+                    if (beggin_hmec <= begin_overflowGSM) and (end_overflowGSM <= end_hmec) and t1=="False":
+                        yekSar_GSM += 1
+                    if (beggin_interaction <= begin_overflowGSM) and (end_overflowGSM <= end_interaction) and t2=="False":
+                        yekSar_GSM += 1
+
+                    if 10 <= abs(beggin_hmec - end_overflowGSM) and abs(beggin_hmec - end_overflowGSM) <= ekhtelaf and t1=="False":
+                        yekSar_GSM += 1
+                    if 10 <= abs(beggin_interaction - end_overflowGSM) and abs(beggin_interaction - end_overflowGSM) <= ekhtelaf and t2=="False":
+                        yekSar_GSM += 1
+
+                    if 10 <= abs(end_hmec - begin_overflowGSM) and abs(end_hmec - begin_overflowGSM) <= ekhtelaf  and t1=="False":
+                        yekSar_GSM += 1
+                    if 10 <= abs(end_interaction - begin_overflowGSM) and abs(end_interaction - begin_overflowGSM) <= ekhtelaf and t2=="False":
+                        yekSar_GSM += 1
+
+
+print(dataframe_hmec)
+print(promoter_and_GSM)
+print(yekSar_GSM)
+
+
+def write_information():
+
+    lenOf_Hmec = len(dataframe_hmec.index)
+    numberOf_allGSM = (len(dataframe_GSM.index)) - 1
+
+    dict = {"Number of all interactions ": lenOf_Hmec ,
+            "number of all promoters ": numberOf_allPromoters,
+            "Number of all GSMs ": numberOf_allGSM,
+
+            'Number of overlaped interaction (just contain promoter) ':yesSar_promoter,#(یک سر پروموتر دار) تعداد تمام اینترکشن هایی که به مرحله بعد آمدند
+
+            "Number of GSMs that had overlap with interactions (contain promoter and GSM) ":promoter_and_GSM , #   یه سر پروموتر یه سر جی اس ام
+
+            "Number of nonOverlap interactions ":hichSar_promoter ,#تعداد اینترکشن هایی که به مرحله بعد نیومدن (فاقد پروموتر)
+
+            "Number of Non-overlapped interaction that some GSMs are in their bin ":yekSar_GSM  #تعداد اینترکشن هایی که به مرحله بعد نیومدن اما این سری از اینها با جی اس ام ها اورلپ دارند
+
+    }
+
+
+    with open("information.csv", 'w') as csv_file:
+        writer = csv.writer(csv_file)
+        for key, value in dict.items():
+            writer.writerow([key, value])
+
+write_information()
+
+
+
+
+
+

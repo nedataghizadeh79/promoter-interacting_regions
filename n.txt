@@ -1,0 +1,276 @@
+import csv
+import pandas as pd
+
+HMEC_dict_start = {}
+interaction_HMEC_dict={}
+
+dataframe_GSM=pd.DataFrame()
+dataframe_hmec=pd.DataFrame()
+
+
+with open('HMEC_SRR1658680.csv', 'r') as Hfile:
+    csv_reader = csv.reader(Hfile)
+    dataframe_hmec = pd.DataFrame(csv_reader)
+
+
+addresOHmecFile = "HMEC_SRR1658680.csv"
+df_start_hmec = pd.read_csv(addresOHmecFile, usecols=['start'], low_memory=True)
+df_chr_hmec = pd.read_csv(addresOHmecFile, usecols=["chr"], low_memory=True)
+df_start_of_interaction = pd.read_csv(addresOHmecFile, usecols=["start_interaction"], low_memory=True)
+
+
+def add_Required_HmecData_toDictionary(dataFrame1, dic ):
+    for i in range(len(dataFrame1.index)):
+        key = int(dataFrame1.iloc[i].to_string(index=False))
+        if key not in dic.keys():
+            dic[key] = [ int(df_chr_hmec.iloc[i].to_string(index=False)) ]
+
+add_Required_HmecData_toDictionary(df_start_hmec , HMEC_dict_start )
+add_Required_HmecData_toDictionary(df_start_of_interaction , interaction_HMEC_dict )
+
+
+def hash_start_end(num , adad):
+    return int(int(num) // adad) * adad
+
+
+numberOf_allPromoters = 0
+char_promoterList=['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22']
+
+with open('promoters_with_chr.csv', 'r') as Promfile:
+    csv_reader = csv.reader(Promfile)
+    dataframe_promoter = pd.DataFrame(csv_reader)
+    numberOf_allPromoters = (len(dataframe_promoter.index)) - 1
+
+    for i in range(1, len(dataframe_promoter.index) ):
+        begin_overflow = dataframe_promoter.iloc[[i]][1].to_string(index=False)
+        end_overflow = dataframe_promoter.iloc[[i]][2].to_string(index=False)
+        char_promoter = (dataframe_promoter.iloc[[i]][5].to_string(index=False))
+        start = hash_start_end(int(begin_overflow) , 5000)  # hash shode
+        end = hash_start_end(int(end_overflow),5000)  # hash shode
+
+        if start == end  :
+            if char_promoter in char_promoterList:
+                if start in HMEC_dict_start and int(char_promoter)==HMEC_dict_start[start][0]:
+                    dataframe_hmec.loc[dataframe_hmec[3].eq(str(start)), 12] = True
+
+        else:
+            if char_promoter in char_promoterList:
+                if start in HMEC_dict_start and int(char_promoter)==HMEC_dict_start[start][0]:
+                    if int(start) + 5000 - int(begin_overflow) >= 10:
+                        dataframe_hmec.loc[dataframe_hmec[3].eq(str(start)), 12] = True
+
+                if end in HMEC_dict_start and int(char_promoter)==HMEC_dict_start[end][0]:
+                    if int(end_overflow) - int(end) >= 10:
+                        dataframe_hmec.loc[dataframe_hmec[3].eq(str(end)), 12] = True
+
+#//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+        if start == end:
+            if char_promoter in char_promoterList:
+                if start in interaction_HMEC_dict and int(char_promoter)==interaction_HMEC_dict[start][0]:
+                    dataframe_hmec.loc[dataframe_hmec[7].eq(str(start)), 13] = True
+
+        else:
+            if char_promoter in char_promoterList:
+                if start in interaction_HMEC_dict and int(char_promoter)==interaction_HMEC_dict[start][0]:
+                    if int(start) + 5000 - int(begin_overflow) >= 10:
+                        dataframe_hmec.loc[dataframe_hmec[7].eq(str(start)), 13] = True
+
+                if end in interaction_HMEC_dict and int(char_promoter)==interaction_HMEC_dict[end][0]:
+                    if int(end_overflow) - int(end) >= 10:
+                        dataframe_hmec.loc[dataframe_hmec[7].eq(str(end)), 13] = True
+
+
+
+# hazfe onaee ke har2 sareshan shamele promotere
+index_names = dataframe_hmec[ (dataframe_hmec[12] == True ) & (dataframe_hmec[13] == True) ].index
+dataframe_hmec.drop(index_names, inplace=True)
+
+
+
+
+just_hmec={}
+just_interaction={}
+
+
+for i in range(1, len(dataframe_hmec.index)):
+    startHmec= int(dataframe_hmec.iloc[[i]][3].to_string(index=False))
+    interactionHmec= int(dataframe_hmec.iloc[[i]][7].to_string(index=False))
+    chrHmec= int(dataframe_hmec.iloc[[i]][2].to_string(index=False))
+    t1 = dataframe_hmec.iloc[[i]][12].to_string(index=False)
+    t2 = dataframe_hmec.iloc[[i]][13].to_string(index=False)
+
+    if t1 == "False" and t2=="False" :
+        if startHmec not in just_hmec.keys():
+            just_hmec[startHmec]=[ chrHmec ]
+
+        if interactionHmec not in just_interaction.keys():
+            just_interaction[interactionHmec]=[ chrHmec ]
+
+    if (t1=='False' and t2=='True') :
+        if startHmec not in just_hmec.keys():
+            just_hmec[startHmec] = [chrHmec]
+
+    if (t1 == 'True' and t2 == 'False' ) :
+        if interactionHmec not in just_interaction.keys():
+            just_interaction[interactionHmec] = [chrHmec]
+
+char_GSM_list=['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25']
+
+with open('H3K27ac (ab4729).csv', 'r') as GSMfile:
+
+    csv_reader = csv.reader(GSMfile)
+    dataframe_GSM = pd.DataFrame(csv_reader)
+    numberOf_allGSMs = (len(dataframe_GSM.index)) - 1
+
+    for i in range(1, (len(dataframe_GSM.index))):
+        begin_overflow = int(dataframe_GSM.iloc[[i]][1].to_string(index=False))
+        end_overflow = int(dataframe_GSM.iloc[[i]][2].to_string(index=False))
+        ekhtelaf = end_overflow - begin_overflow
+        start = hash_start_end( (begin_overflow) , ekhtelaf)  # hash shode
+        end = hash_start_end( (end_overflow) , ekhtelaf)  # hash shode
+        number = (dataframe_GSM.iloc[[i]][0].to_string(index=False))[3:]
+        char_GSM = (number)
+
+        # barresi vojode GSM dar hichSar ( shamele hm interaction va hm hmec)
+        if ekhtelaf <= 5000 :
+            if start == end :
+                if char_GSM in char_GSM_list:
+                    if start in just_hmec and int(char_GSM) == just_hmec[start][0] :
+                        dataframe_hmec.loc[dataframe_hmec[3].eq(str(start)), 14] = True
+
+            else:
+                if char_GSM in char_GSM_list:
+                    if start in just_hmec and int(char_GSM) == just_hmec[start][0] :
+                        if int(start) + 5000 - int(begin_overflow) >= 10:
+                            dataframe_hmec.loc[dataframe_hmec[3].eq(str(start)), 14] = True
+    
+                    if end in just_hmec and int(char_GSM) == just_hmec[end][0] :
+                        if int(end_overflow) - int(end) >= 10:
+                            dataframe_hmec.loc[dataframe_hmec[3].eq(str(end)), 14] = True
+
+        # ///////////////////////////////////////////////////
+        # barresi yeksar
+
+            if start == end:
+                if char_GSM in char_GSM_list:
+                    if start in just_interaction and int(char_GSM) == just_interaction[start][0]:
+                        dataframe_hmec.loc[dataframe_hmec[7].eq(str(start)), 14] = True
+
+            else:
+                if char_GSM in char_GSM_list:
+                    if start in just_interaction and int(char_GSM) == just_interaction[start][0]:
+                        if int(start) + 5000 - int(begin_overflow) >= 10:
+                            dataframe_hmec.loc[dataframe_hmec[7].eq(str(start)), 14] = True
+    
+                    if end in just_interaction and int(char_GSM) == just_interaction[end][0]:
+                        if int(end_overflow) - int(end) >= 10:
+                            dataframe_hmec.loc[dataframe_hmec[7].eq(str(end)), 14] = True
+
+
+        else:
+            if char_GSM in char_GSM_list:
+                for num in range (5000 * (begin_overflow // 5000) + 5000 , end_overflow, 5000) :
+    
+                    if num in just_hmec and int(char_GSM) == just_hmec[num][0] :
+                        dataframe_hmec.loc[dataframe_hmec[3].eq(str(num)), 14] = True
+    
+                    if num in just_interaction and int(char_GSM) == just_interaction[num][0] :
+                        dataframe_hmec.loc[dataframe_hmec[7].eq(str(num)), 14] = True
+
+
+yekSar_promoter=0
+hichi=0
+yekSar_promoter_yekSar_GSM=0
+yekSar_GSM=0
+
+
+for i in range(1, len(dataframe_hmec.index)):
+    startHmec = int(dataframe_hmec.iloc[[i]][3].to_string(index=False))
+    interactionHmec = int(dataframe_hmec.iloc[[i]][7].to_string(index=False))
+    chrHmec = int(dataframe_hmec.iloc[[i]][2].to_string(index=False))
+    t1 = dataframe_hmec.iloc[[i]][12].to_string(index=False)
+    t2 = dataframe_hmec.iloc[[i]][13].to_string(index=False)
+    g = dataframe_hmec.iloc[[i]][14].to_string(index=False)
+
+    if t1=='False' and t2=='False' and g=='True':
+        yekSar_GSM+=1
+
+    if (t1 == 'True' and t2 == 'False' and g == 'True') or (t1 == 'False' and t2 == 'True' and g == 'True'):
+        yekSar_promoter_yekSar_GSM+=1
+
+    if t1=='False' and t2=='False' and g=='False':
+        hichi+=1
+
+    if (t1 == 'True' and t2 == 'False' and g == 'False') or (t1 == 'False' and t2 == 'True' and g == 'False'):
+        yekSar_promoter+=1
+
+
+def write_information():
+
+    lenOf_Hmec = len(df_start_hmec.index)
+
+    dict = {"Number of all interactions ": lenOf_Hmec ,
+            "number of all promoters ": numberOf_allPromoters,
+            "Number of all GSMs ": numberOf_allGSMs,
+
+            'just contain promoter ': ( yekSar_promoter),  #(یک سر پروموتر دار)
+
+            "nonPromoter ": hichi,  # (فاقد پروموتر)
+
+            "just contain GSM ": yekSar_GSM,
+
+            "contain promoter and GSM ":yekSar_promoter_yekSar_GSM   #   یه سر پروموتر یه سر جی اس ام
+
+            }
+
+
+    with open("information.csv", 'w') as csv_file:
+        writer = csv.writer(csv_file)
+        for key, value in dict.items():
+            writer.writerow([key, value])
+
+write_information()
+
+
+
+
+
+
+# 2
+
+
+# import pandas as pd
+# import matplotlib.pyplot as plt
+#
+# file_path = "/information.csv"
+#
+# one_side_promoter_overlapped_precent = []
+# no_side_promoter_overlapped_precent = []
+#
+# for i in range(1,12):
+#
+#     data = pd.read_csv(str(i)+file_path)
+#     promoter_interaction = int(list(data.iloc[1])[1])
+#     histon_promoter_interaction = int(list(data.iloc[6])[1])
+#     nonpromoter_interaction = int(list(data.iloc[9])[1])
+#     nonpromoter_histon_interaction = int(list(data.iloc[10])[1])
+#
+#     percentage_promoter = histon_promoter_interaction / promoter_interaction
+#     percentage_nonpromoter = nonpromoter_histon_interaction / nonpromoter_interaction
+#     one_side_promoter_overlapped_precent.append(percentage_promoter)
+#     no_side_promoter_overlapped_precent.append(percentage_nonpromoter)
+#
+# result_df = pd.DataFrame({
+#     'labels': [i for i in range(1,12)],
+#     'promo_overlapped': one_side_promoter_overlapped_precent,
+#     'non_promo_overlapped': no_side_promoter_overlapped_precent
+# })
+#
+# print(result_df.head())
+# result_df.plot("labels", ['promo_overlapped', 'non_promo_overlapped'], kind='bar')
+# plt.show()
+#
+
+
